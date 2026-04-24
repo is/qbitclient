@@ -158,6 +158,35 @@ python3 qbitclient.py rm HASH --delete-files
 python3 qbitclient.py rm all
 ```
 
+### cleanup - Cleanup Completed Torrents
+
+Automatically remove completed torrents (progress = 100%).
+
+```bash
+python3 qbitclient.py cleanup [OPTIONS]
+
+Options:
+  --delete-files         Also delete downloaded files
+  --dry-run              List completed torrents without deleting
+  -y, --yes              Skip confirmation prompt and delete directly
+```
+
+Examples:
+```bash
+# Cleanup completed torrents (with confirmation)
+python3 qbitclient.py cleanup
+
+# Cleanup and delete files
+python3 qbitclient.py cleanup --delete-files
+
+# Dry run - list without deleting
+python3 qbitclient.py cleanup --dry-run
+
+# Skip confirmation
+python3 qbitclient.py cleanup --yes
+python3 qbitclient.py cleanup -y
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |

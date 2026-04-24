@@ -158,6 +158,35 @@ python3 qbitclient.py rm HASH --delete-files
 python3 qbitclient.py rm all
 ```
 
+### cleanup - 清理已完成的种子
+
+自动移除已完成的种子任务（进度100%）。
+
+```bash
+python3 qbitclient.py cleanup [选项]
+
+选项：
+  --delete-files 同时删除下载的文件
+  --dry-run 仅列出已完成的种子，不执行删除
+  -y, --yes 跳过确认提示，直接删除
+```
+
+示例：
+```bash
+# 清理已完成的种子（需要确认）
+python3 qbitclient.py cleanup
+
+# 清理并删除文件
+python3 qbitclient.py cleanup --delete-files
+
+# 试运行 - 仅列出不删除
+python3 qbitclient.py cleanup --dry-run
+
+# 跳过确认
+python3 qbitclient.py cleanup --yes
+python3 qbitclient.py cleanup -y
+```
+
 ## 环境变量
 
 | 变量名 | 说明 | 默认值 |

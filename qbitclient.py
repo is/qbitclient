@@ -460,6 +460,7 @@ def main():
     cleanup_parser = subparsers.add_parser('cleanup', help='自动移除已完成的种子(进度100%%)')
     cleanup_parser.add_argument('--delete-files', action='store_true', help='同时删除下载的文件')
     cleanup_parser.add_argument('--dry-run', action='store_true', help='仅列出已完成的种子，不执行删除')
+    cleanup_parser.add_argument('--yes', '-y', action='store_true', help='跳过确认提示，直接删除')
 
     args = parser.parse_args()
 
@@ -556,11 +557,12 @@ def main():
                 print("✓ Dry run 模式，未执行删除")
                 sys.exit(0)
 
-            # 确认删除
-            confirm = input(f"确定要删除这 {len(completed)} 个已完成的种子吗? (yes/no): ")
-            if confirm.lower() != 'yes':
-                print("取消删除")
-                sys.exit(0)
+            # 确认删除（除非指定了 --yes）
+            if not args.yes:
+                confirm = input(f"确定要删除这 {len(completed)} 个已完成的种子吗? (yes/no): ")
+                if confirm.lower() != 'yes':
+                    print("取消删除")
+                    sys.exit(0)
 
             # 提取hash并删除
             hashes = [t.get('hash') for t in completed if t.get('hash')]
