@@ -2,14 +2,16 @@
 """
 qBittorrent API Client
 支持添加种子、列出任务和删除任务
+使用Python内置urllib，无需外部依赖
 """
 
-import requests
 import sys
 import json
 import argparse
 import os
+import http.cookiejar
 from pathlib import Path
+from urllib import request, parse, error
 
 
 # 环境变量名称
@@ -18,12 +20,110 @@ ENV_USERNAME = 'QBITTORRENT_USERNAME'
 ENV_PASSWORD = 'QBITTORRENT_PASSWORD'
 
 
+class SimpleSession:
+    """简单的HTTP会话类，使用urllib实现，支持Cookie"""
+    
+    def __init__(self):
+        self.cookie_jar = http.cookiejar.CookieJar()
+        self.opener = request.build_opener(
+            request.HTTPCookieProcessor(self.cookie_jar)
+        )
+    
+    def post(self, url, data=None, headers=None, timeout=10, files=None):
+        """发送POST请求"""
+        if files:
+            # multipart/form-data 上传
+            return self._post_multipart(url, data, files, headers, timeout)
+        else:
+            # application/x-www-form-urlencoded
+            req_headers = headers or {}
+            if data:
+                encoded_data = parse.urlencode(data).encode('utf-8')
+            else:
+                encoded_data = None
+            
+            req = request.Request(url, data=encoded_data, headers=req_headers, method='POST')
+            return self._do_request(req, timeout)
+    
+    def get(self, url, params=None, headers=None, timeout=10):
+        """发送GET请求"""
+        req_headers = headers or {}
+        
+        if params:
+            url = url + '?' + parse.urlencode(params)
+        
+        req = request.Request(url, headers=req_headers, method='GET')
+        return self._do_request(req, timeout)
+    
+    def _do_request(self, req, timeout):
+        """执行请求并返回响应对象"""
+        try:
+            response = self.opener.open(req, timeout=timeout)
+            return SimpleResponse(response)
+        except error.HTTPError as e:
+            return SimpleResponse(e)
+        except error.URLError as e:
+            raise Exception(f"连接错误: {str(e)}")
+    
+    def _post_multipart(self, url, data, files, headers=None, timeout=30):
+        """处理multipart/form-data上传"""
+        boundary = b'----FormBoundary' + os.urandom(8).hex().encode()
+        body_parts = []
+        
+        # 添加表单字段
+        if data:
+            for key, value in data.items():
+                body_parts.append(b'--' + boundary)
+                body_parts.append(f'Content-Disposition: form-data; name="{key}"'.encode())
+                body_parts.append(b'')
+                body_parts.append(str(value).encode())
+        
+        # 添加文件
+        for field_name, (filename, file_data, content_type) in files.items():
+            body_parts.append(b'--' + boundary)
+            body_parts.append(f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"'.encode())
+            body_parts.append(f'Content-Type: {content_type}'.encode())
+            body_parts.append(b'')
+            body_parts.append(file_data)
+        
+        body_parts.append(b'--' + boundary + b'--')
+        body_parts.append(b'')
+        
+        body = b'\r\n'.join(body_parts)
+        
+        req_headers = headers or {}
+        req_headers['Content-Type'] = f'multipart/form-data; boundary={boundary.decode()}'
+        req_headers['Content-Length'] = str(len(body))
+        
+        req = request.Request(url, data=body, headers=req_headers, method='POST')
+        return self._do_request(req, timeout)
+
+
+class SimpleResponse:
+    """简单的响应包装类"""
+    
+    def __init__(self, response):
+        self.status_code = response.getcode() or response.code
+        self.headers = dict(response.headers)
+        self._response = response
+        self._text = None
+    
+    @property
+    def text(self):
+        if self._text is None:
+            self._text = self._response.read().decode('utf-8', errors='ignore')
+        return self._text
+    
+    def json(self):
+        return json.loads(self.text)
+
+
 class QBittorrentClient:
     def __init__(self, host="http://localhost:8080", username="admin", password="adminadmin"):
         self.host = host.rstrip('/')
         self.username = username
         self.password = password
-        self.session = requests.Session()
+        self.session = SimpleSession()
         self.logged_in = False
 
     def login(self):
@@ -125,7 +225,7 @@ class QBittorrentClient:
             data['paused'] = 'true'
 
         try:
-            response = self.session.post(url, files=files, data=data, timeout=30)
+            response = self.session.post(url, data=data, files=files, timeout=30)
             if response.status_code == 200:
                 return True, "种子文件添加成功"
             else:
