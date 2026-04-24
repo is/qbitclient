@@ -297,6 +297,40 @@ class QBittorrentClient:
         except Exception as e:
             return False, f"删除错误: {str(e)}"
 
+    def cleanup_completed(self, delete_files=False):
+        """
+        自动移除已完成的种子任务（进度100%）
+        delete_files: 是否同时删除下载的文件
+        返回: (success, message, removed_count)
+        """
+        if not self.logged_in:
+            return False, "未登录", 0
+
+        # 获取所有种子
+        success, torrents = self.list_torrents()
+        if not success:
+            return False, f"获取种子列表失败: {torrents}", 0
+
+        # 筛选进度为100%的种子
+        completed = [t for t in torrents if t.get('progress', 0) >= 1.0]
+
+        if not completed:
+            return True, "没有已完成的种子需要清理", 0
+
+        # 提取hash
+        hashes = [t.get('hash') for t in completed if t.get('hash')]
+
+        if not hashes:
+            return True, "没有找到有效的种子hash", 0
+
+        # 删除种子
+        success, message = self.delete_torrents(hashes, delete_files)
+        
+        if success:
+            return True, f"成功清理 {len(hashes)} 个已完成的种子", len(hashes)
+        else:
+            return False, message, 0
+
     def print_torrents(self, torrents, verbose=False):
         """格式化打印种子列表"""
         if not torrents:
@@ -422,6 +456,11 @@ def main():
     rm_parser.add_argument('hashes', nargs='+', help='种子hash或"all"')
     rm_parser.add_argument('--delete-files', action='store_true', help='同时删除下载的文件')
 
+    # cleanup 命令
+    cleanup_parser = subparsers.add_parser('cleanup', help='自动移除已完成的种子（进度100%）')
+    cleanup_parser.add_argument('--delete-files', action='store_true', help='同时删除下载的文件')
+    cleanup_parser.add_argument('--dry-run', action='store_true', help='仅列出已完成的种子，不执行删除')
+
     args = parser.parse_args()
 
     if not args.command:
@@ -487,6 +526,44 @@ def main():
                     print("取消删除")
                     sys.exit(0)
                 hashes = 'all'
+
+            success, message = client.delete_torrents(
+                hashes=hashes,
+                delete_files=args.delete_files
+            )
+            print(f"{'✓' if success else '✗'} {message}")
+
+        elif args.command == 'cleanup':
+            # 获取已完成的种子
+            success, torrents_result = client.list_torrents()
+
+            if not success:
+                print(f"✗ 获取种子列表失败: {torrents_result}")
+                sys.exit(1)
+
+            # 筛选进度为100%的种子
+            completed = [t for t in torrents_result if t.get('progress', 0) >= 1.0]
+
+            if not completed:
+                print("✓ 没有已完成的种子需要清理")
+                sys.exit(0)
+
+            # 显示已完成的种子
+            print(f"\n找到 {len(completed)} 个已完成的种子:")
+            client.print_torrents(completed, verbose=False)
+
+            if args.dry_run:
+                print("✓ Dry run 模式，未执行删除")
+                sys.exit(0)
+
+            # 确认删除
+            confirm = input(f"确定要删除这 {len(completed)} 个已完成的种子吗? (yes/no): ")
+            if confirm.lower() != 'yes':
+                print("取消删除")
+                sys.exit(0)
+
+            # 提取hash并删除
+            hashes = [t.get('hash') for t in completed if t.get('hash')]
 
             success, message = client.delete_torrents(
                 hashes=hashes,
