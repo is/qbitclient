@@ -110,7 +110,7 @@ python3 qbitclient.py list [选项]
   --filter 过滤状态（all/downloading/seeding/completed/paused/active/inactive等）
   --category 按分类过滤
   --tag 按标签过滤
-  --sort 排序字段
+  --sort 排序字段（name/size/progress/added_on/completion_on/ratio等）
   --reverse 反向排序
   --limit 限制返回数量
   -v, --verbose 显示详细信息
@@ -129,6 +129,15 @@ python3 qbitclient.py list -v
 
 # 按分类过滤
 python3 qbitclient.py list --category movies
+
+# 按添加日期排序（旧的在前）
+python3 qbitclient.py list --sort added_on
+
+# 按添加日期排序（新的在前）
+python3 qbitclient.py list --sort added_on --reverse
+
+# 按完成日期排序
+python3 qbitclient.py list --sort completion_on
 
 # 限制返回数量
 python3 qbitclient.py list --limit 10 --sort progress --reverse

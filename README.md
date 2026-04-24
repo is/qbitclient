@@ -110,7 +110,7 @@ Options:
   --filter FILTER        Filter by status (all/downloading/seeding/completed/paused/active/inactive, etc.)
   --category CATEGORY    Filter by category
   --tag TAG              Filter by tag
-  --sort FIELD           Sort field
+  --sort FIELD           Sort field (name/size/progress/added_on/completion_on/ratio, etc.)
   --reverse              Reverse sort order
   --limit NUM            Limit number of results
   -v, --verbose         Show detailed information
@@ -129,6 +129,15 @@ python3 qbitclient.py list -v
 
 # Filter by category
 python3 qbitclient.py list --category movies
+
+# Sort by addition date (oldest first)
+python3 qbitclient.py list --sort added_on
+
+# Sort by addition date (newest first)
+python3 qbitclient.py list --sort added_on --reverse
+
+# Sort by completion date
+python3 qbitclient.py list --sort completion_on
 
 # Limit results
 python3 qbitclient.py list --limit 10 --sort progress --reverse
