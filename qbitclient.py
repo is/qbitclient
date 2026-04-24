@@ -457,7 +457,7 @@ def main():
     rm_parser.add_argument('--delete-files', action='store_true', help='同时删除下载的文件')
 
     # cleanup 命令
-    cleanup_parser = subparsers.add_parser('cleanup', help='自动移除已完成的种子（进度100%）')
+    cleanup_parser = subparsers.add_parser('cleanup', help='自动移除已完成的种子(进度100%%)')
     cleanup_parser.add_argument('--delete-files', action='store_true', help='同时删除下载的文件')
     cleanup_parser.add_argument('--dry-run', action='store_true', help='仅列出已完成的种子，不执行删除')
 
